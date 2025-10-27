@@ -1,0 +1,58 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+dist/
+*.log
+
+backend/src/uploads/*
+
+
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Android
+*.apk
+*.ap_
+build/
+*.keystore
+
+# iOS
+ios/build/
+ios/Pods/
+*.xcodeproj/project.xcworkspace/
+*.xcuserstate
+*.xcworkspace
+*.ipa
+
+# TypeScript
+*.tsbuildinfo
+
+# Outros
+.expo-metro-cache/
