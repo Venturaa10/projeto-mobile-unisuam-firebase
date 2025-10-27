@@ -1,5 +1,7 @@
 import { Aluno } from "../initModels.js"; 
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
 
 // Criar aluno
 export const criarAluno = async (req, res) => {
@@ -20,6 +22,44 @@ export const criarAluno = async (req, res) => {
     res.status(201).json(aluno);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+
+// POST /auth/google/aluno
+export const loginGoogleAluno = async (req, res) => {
+  try {
+    const { email, nome, googleId } = req.body;
+
+    if (!email || !nome || !googleId) {
+      return res.status(400).json({ error: "Dados incompletos" });
+    }
+
+    // Verifica se o aluno já existe
+    let aluno = await Aluno.findOne({ where: { googleId } });
+
+    if (!aluno) {
+      // Se não existe, cria novo
+      aluno = await Aluno.create({ email, nome, googleId });
+    }
+
+    // Cria token JWT (ajuste o segredo)
+    const token = jwt.sign({ id: aluno.id, tipo: "aluno" }, process.env.JWT_SECRET || "segredo", {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      token,
+      tipo: "aluno",
+      usuario: {
+        id: aluno.id,
+        nome: aluno.nome,
+        email: aluno.email,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao autenticar com Google" });
   }
 };
 

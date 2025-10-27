@@ -42,7 +42,7 @@ export interface LoginResponse {
 // });
 
 const api = axios.create({
-  baseURL: "https://projeto-mobile-unisuam.onrender.com/api",
+  baseURL: "https://projeto-mobile-unisuam-firebase.onrender.com",
   headers: { "Content-Type": "application/json" },
 });
 

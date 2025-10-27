@@ -37,8 +37,7 @@ const LoginScreen: React.FC = () => {
 
   // Configuração do Google Auth
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    iosClientId: "SEU_IOS_CLIENT_ID",
-    androidClientId: "SEU_ANDROID_CLIENT_ID",
+    androidClientId: "172745544733-13jekhqkme2hiilt19r2a1u7uu3mk6u9.apps.googleusercontent.com",
   });
 
   useEffect(() => {

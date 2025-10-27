@@ -1,5 +1,6 @@
 import { Universidade } from "../initModels.js"; 
 import bcrypt from "bcryptjs"; 
+import jwt from "jsonwebtoken";
 
 export const criarUniversidade = async (req, res) => {
   try {
@@ -7,6 +8,41 @@ export const criarUniversidade = async (req, res) => {
     res.status(201).json(uni);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+// POST /auth/google/universidade
+export const loginGoogleUniversidade = async (req, res) => {
+  try {
+    const { email, nome, googleId } = req.body;
+
+    if (!email || !nome || !googleId) {
+      return res.status(400).json({ error: "Dados incompletos" });
+    }
+
+    // Verifica se já existe
+    let universidade = await Universidade.findOne({ where: { googleId } });
+
+    if (!universidade) {
+      universidade = await Universidade.create({ email, nome, googleId });
+    }
+
+    const token = jwt.sign({ id: universidade.id, tipo: "universidade" }, process.env.JWT_SECRET || "segredo", {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      token,
+      tipo: "universidade",
+      usuario: {
+        id: universidade.id,
+        nome: universidade.nome,
+        email: universidade.email,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao autenticar com Google" });
   }
 };
 
