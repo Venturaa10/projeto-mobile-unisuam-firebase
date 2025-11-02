@@ -38,6 +38,7 @@ export const loginGoogleUniversidade = async (req, res) => {
         id: universidade.id,
         nome: universidade.nome,
         email: universidade.email,
+        cnpj: universidade.cnpj,
       },
     });
   } catch (err) {

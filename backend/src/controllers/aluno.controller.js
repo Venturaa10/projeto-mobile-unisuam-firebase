@@ -55,6 +55,7 @@ export const loginGoogleAluno = async (req, res) => {
         id: aluno.id,
         nome: aluno.nome,
         email: aluno.email,
+        cpf: aluno.cpf,
       },
     });
   } catch (err) {
