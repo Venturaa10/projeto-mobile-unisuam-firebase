@@ -4,7 +4,7 @@ import { criarUniversidade, listarUniversidades, buscarUniversidadePorId, atuali
 
 const router = express.Router();
 
-router.post("/auth/google/universidade", loginGoogleUniversidade);
+// router.post("/auth/google/universidade", loginGoogleUniversidade);
 
 // Criar universidade
 router.post("/", criarUniversidade);

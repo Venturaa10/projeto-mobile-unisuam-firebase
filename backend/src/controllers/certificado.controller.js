@@ -1,6 +1,6 @@
 import { Certificado, Universidade } from "../initModels.js";
 import fs from "fs";
-// import { supabase } from "../config/supabase.js";
+import { supabase } from "../config/supabase.js";
 import path from "path";
 
 

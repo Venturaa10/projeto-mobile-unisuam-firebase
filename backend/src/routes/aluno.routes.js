@@ -6,7 +6,7 @@ const router = express.Router();
 
 
 // Login com Google
-router.post("/auth/google/aluno", loginGoogleAluno);
+// router.post("/auth/google/aluno", loginGoogleAluno);
 
 // Criar aluno
 router.post("/", criarAluno);
