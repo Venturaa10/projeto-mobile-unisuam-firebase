@@ -1,6 +1,6 @@
 import express from "express";
 import upload from "../middlewares/upload.js";
-import { criarAluno, listarAlunos, buscarAlunoPorId, atualizarAluno, atualizarSenhaAluno, excluirAluno, loginGoogleAluno } from "../controllers/aluno.controller.js";
+import { criarAluno, listarAlunos, buscarAlunoPorId, atualizarAluno, atualizarSenhaAluno, excluirAluno } from "../controllers/aluno.controller.js";
 
 const router = express.Router();
 
