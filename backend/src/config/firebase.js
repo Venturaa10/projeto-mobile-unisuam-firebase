@@ -1,5 +1,7 @@
 import admin from "firebase-admin";
-import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
+
+// Converte a variável de ambiente (string) em objeto JSON
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || "{}");
 
 if (!admin.apps.length) {
   admin.initializeApp({
