@@ -1,26 +1,40 @@
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation  } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { RootStackParamList } from "../navigation/AppNavigator"; // ajuste conforme sua stack
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 
 const HomeScreen: React.FC = () => {
   const [usuario, setUsuario] = useState<any>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, "Home">>();
 
-  useFocusEffect(
-    useCallback(() => {
-      const carregarUsuario = async () => {
-        try {
-          const usuarioStr = await AsyncStorage.getItem("usuario");
-          if (usuarioStr) {
-            setUsuario(JSON.parse(usuarioStr));
-          }
-        } catch (err) {
-          console.log("Erro ao carregar usuário:", err);
+useFocusEffect(
+  useCallback(() => {
+    const carregarUsuario = async () => {
+      try {
+        // 1️⃣ Verifica se veio o usuário atualizado via params
+        const params = navigation.getState().routes.find(r => r.name === "Home")?.params as { usuarioAtualizado?: any } | undefined;
+        if (params?.usuarioAtualizado) {
+          setUsuario(params.usuarioAtualizado);
+          return;
         }
-      };
-      carregarUsuario();
-    }, [])
-  );
+
+        // 2️⃣ Caso não venha, busca no AsyncStorage
+        const usuarioStr = await AsyncStorage.getItem("usuario");
+        if (usuarioStr) {
+          setUsuario(JSON.parse(usuarioStr));
+        }
+      } catch (err) {
+        console.log("Erro ao carregar usuário:", err);
+      }
+    };
+
+    carregarUsuario();
+  }, [navigation])
+);
+
 
   if (!usuario) {
     return (

@@ -18,7 +18,7 @@ import SobreScreen from "../screens/SobreScreen";
 
 export type RootStackParamList = {
   Login: undefined;
-  Home: undefined;
+  Home: { usuarioAtualizado?: any } | undefined; // <- aqui
   Cadastro: undefined;
   BuscaCertificado: undefined;
   Perfil: { userType: "aluno" | "universidade"; userId: number };

@@ -96,7 +96,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
   };
 
   // 💾 Atualizar perfil
-  const handleAtualizar = async () => {
+const handleAtualizar = async () => {
   setLoading(true);
   try {
     const endpoint =
@@ -104,7 +104,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
         ? `/alunos/atualizarCampos/${userId}`
         : `/universidades/atualizarCampos/${userId}`;
 
-    // 🔹 Pega o usuário do AsyncStorage caso user.uid não exista
     let uidToSend = user?.uid;
     if (!uidToSend) {
       const storedUser = await AsyncStorage.getItem("usuario");
@@ -122,7 +121,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
       uid: uidToSend,
       nome,
       email,
-      cep: cep.replace(/\D/g, ""), // remove qualquer caractere que não seja número
+      cep: cep.replace(/\D/g, ""),
       endereco,
       bairro,
       estado,
@@ -155,10 +154,14 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
     await AsyncStorage.setItem("tipo", userType);
     if (token) await AsyncStorage.setItem("token", token);
 
+    // Navega para Home passando o usuário atualizado
     Alert.alert("Sucesso", "Perfil atualizado!", [
       {
         text: "OK",
-        onPress: () => navigation.navigate("Home"),
+        onPress: () =>
+          navigation.navigate("Home", {
+            usuarioAtualizado: { ...updatedUser, uid: uidToSend },
+          }),
       },
     ]);
   } catch (err: any) {
@@ -168,6 +171,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
     setLoading(false);
   }
 };
+
 
 
   // 🗑️ Excluir conta
