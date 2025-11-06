@@ -3,22 +3,28 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 
-// Criar aluno
 export const criarAluno = async (req, res) => {
-  /**
-   * Exemplo de Json para teste.
-   * {
-  "nome": "Nome aluno",
-  "cpf": "123.456.789-00",
-  "email": "aluno@example.com",
-  "senha": "123456",
-  "imagemPerfil": "https://exemplo.com/imagem.jpg"
-}
-   * 
-   */
-
   try {
-    const aluno = await Aluno.create(req.body);
+    const { uid, nome, cpf, email, imagemPerfil } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: "UID do Firebase é obrigatório" });
+    }
+
+    // Evita duplicar usuário
+    const existe = await Aluno.findOne({ where: { email } });
+    if (existe) {
+      return res.status(400).json({ error: "E-mail já cadastrado" });
+    }
+
+    const aluno = await Aluno.create({
+      uid, // chave Firebase
+      nome,
+      cpf,
+      email,
+      imagemPerfil,
+    });
+
     res.status(201).json(aluno);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -26,43 +32,6 @@ export const criarAluno = async (req, res) => {
 };
 
 
-// POST /auth/google/aluno
-export const loginGoogleAluno = async (req, res) => {
-  try {
-    const { email, nome, googleId } = req.body;
-
-    if (!email || !nome || !googleId) {
-      return res.status(400).json({ error: "Dados incompletos" });
-    }
-
-    // Verifica se o aluno já existe
-    let aluno = await Aluno.findOne({ where: { googleId } });
-
-    if (!aluno) {
-      // Se não existe, cria novo
-      aluno = await Aluno.create({ email, nome, googleId });
-    }
-
-    // Cria token JWT (ajuste o segredo)
-    const token = jwt.sign({ id: aluno.id, tipo: "aluno" }, process.env.JWT_SECRET || "segredo", {
-      expiresIn: "7d",
-    });
-
-    res.json({
-      token,
-      tipo: "aluno",
-      usuario: {
-        id: aluno.id,
-        nome: aluno.nome,
-        email: aluno.email,
-        cpf: aluno.cpf,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao autenticar com Google" });
-  }
-};
 
 // Listar todos os alunos
 export const listarAlunos = async (req, res) => {
