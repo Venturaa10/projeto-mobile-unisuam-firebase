@@ -12,6 +12,7 @@ type PerfilScreenRouteProp = RouteProp<RootStackParamList, "Perfil">;
 
 interface User {
   id: number;
+    uid: string; 
   nome: string;
   cpf?: string;
   cnpj?: string;
@@ -96,59 +97,78 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ route }) => {
 
   // 💾 Atualizar perfil
   const handleAtualizar = async () => {
-    setLoading(true);
-    try {
-      const endpoint =
-        userType === "aluno"
-          ? `/alunos/atualizarCampos/${userId}`
-          : `/universidades/atualizarCampos/${userId}`;
+  setLoading(true);
+  try {
+    const endpoint =
+      userType === "aluno"
+        ? `/alunos/atualizarCampos/${userId}`
+        : `/universidades/atualizarCampos/${userId}`;
 
-      const payload: any = {
-        nome,
-        email,
-        cep: cep.replace(/\D/g, ""), // remove qualquer caractere que não seja número
-        endereco,
-        bairro,
-        estado,
-      };
-
-      if (userType === "aluno") payload.cpf = cpfCnpj;
-      else payload.cnpj = cpfCnpj;
-
-      const response = await api.put(endpoint, payload, {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const updatedUser = response.data;
-      setUser(updatedUser);
-
+    // 🔹 Pega o usuário do AsyncStorage caso user.uid não exista
+    let uidToSend = user?.uid;
+    if (!uidToSend) {
       const storedUser = await AsyncStorage.getItem("usuario");
-      const token = await AsyncStorage.getItem("token");
-
       if (storedUser) {
-        const oldUser = JSON.parse(storedUser);
-        const mergedUser = { ...oldUser, ...updatedUser };
-        await AsyncStorage.setItem("usuario", JSON.stringify(mergedUser));
-      } else {
-        await AsyncStorage.setItem("usuario", JSON.stringify(updatedUser));
+        const parsedUser = JSON.parse(storedUser);
+        uidToSend = parsedUser.uid;
       }
-
-      await AsyncStorage.setItem("tipo", userType);
-      if (token) await AsyncStorage.setItem("token", token);
-
-      Alert.alert("Sucesso", "Perfil atualizado!", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("Home"),
-        },
-      ]);
-    } catch (err: any) {
-      console.error("Erro ao atualizar:", err.response?.data || err.message);
-      Alert.alert("Erro", "Não foi possível atualizar o perfil.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    if (!uidToSend) {
+      throw new Error("UID do usuário não encontrado. Atualização não pode ser feita.");
+    }
+
+    const payload: any = {
+      uid: uidToSend,
+      nome,
+      email,
+      cep: cep.replace(/\D/g, ""), // remove qualquer caractere que não seja número
+      endereco,
+      bairro,
+      estado,
+    };
+
+    if (userType === "aluno") payload.cpf = cpfCnpj;
+    else payload.cnpj = cpfCnpj;
+
+    console.log("🔹 Payload enviado:", payload);
+
+    const response = await api.put(endpoint, payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const updatedUser = response.data;
+    setUser(updatedUser);
+
+    // Atualiza AsyncStorage
+    const storedUser = await AsyncStorage.getItem("usuario");
+    const token = await AsyncStorage.getItem("token");
+
+    if (storedUser) {
+      const oldUser = JSON.parse(storedUser);
+      const mergedUser = { ...oldUser, ...updatedUser, uid: uidToSend };
+      await AsyncStorage.setItem("usuario", JSON.stringify(mergedUser));
+    } else {
+      await AsyncStorage.setItem("usuario", JSON.stringify({ ...updatedUser, uid: uidToSend }));
+    }
+
+    await AsyncStorage.setItem("tipo", userType);
+    if (token) await AsyncStorage.setItem("token", token);
+
+    Alert.alert("Sucesso", "Perfil atualizado!", [
+      {
+        text: "OK",
+        onPress: () => navigation.navigate("Home"),
+      },
+    ]);
+  } catch (err: any) {
+    console.error("Erro ao atualizar:", err.response?.data || err.message);
+    Alert.alert("Erro", "Não foi possível atualizar o perfil.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 🗑️ Excluir conta
   const handleExcluirConta = () => {

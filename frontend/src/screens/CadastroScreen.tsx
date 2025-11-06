@@ -7,6 +7,8 @@ import { RootStackParamList } from "../navigation/AppNavigator";
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TextInputMask } from "react-native-masked-text";
+import { auth } from "../services/firebase"; // apenas importa auth
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 type CadastroScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Cadastro">;
 type UserType = "aluno" | "universidade";
@@ -39,48 +41,56 @@ const CadastroScreen: React.FC = () => {
   }, []);
 
   const handleCadastro = async () => {
-    if (!nome || !cpfCnpj || !email || !senha || !confirmarSenha) {
-      Alert.alert("Erro", "Preencha todos os campos");
-      return;
-    }
+  if (!nome || !cpfCnpj || !email || !senha || !confirmarSenha) {
+    Alert.alert("Erro", "Preencha todos os campos");
+    return;
+  }
 
-    if (senha.length < 5) {
+  if (senha.length < 5) {
     Alert.alert("Erro", "A senha deve conter no mínimo 5 caracteres");
     return;
   }
 
-    if (senha !== confirmarSenha) {
-      Alert.alert("Erro", "As senhas não coincidem");
-      return;
-    }
+  if (senha !== confirmarSenha) {
+    Alert.alert("Erro", "As senhas não coincidem");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const endpoint = userType === "aluno" ? "/alunos" : "/universidades";
+  setLoading(true);
 
-      const payload =
-        userType === "aluno"
-          ? { nome, cpf: cpfCnpj.replace(/\D/g, ""), email, senha }
-          : { nome, cnpj: cpfCnpj.replace(/\D/g, ""), email, senha };
+  try {
+    // 1️⃣ Cria usuário no Firebase
+    const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+    const user = userCredential.user;
 
-      const response = await api.post(endpoint, payload);
-      Alert.alert(
-        "Sucesso",
-        `${userType === "aluno" ? "Aluno" : "Universidade"} cadastrado com sucesso!`
-      );
+    // 2️⃣ Cria payload para enviar pro backend
+    const endpoint = userType === "aluno" ? "/alunos" : "/universidades";
+    const payload =
+      userType === "aluno"
+        ? { uid: user.uid, nome, cpf: cpfCnpj.replace(/\D/g, ""), email }
+        : { uid: user.uid, nome, cnpj: cpfCnpj.replace(/\D/g, ""), email };
 
-      navigation.replace("Login"); // Redireciona para login
-      } catch (err: any) {
-        console.log("ERRO AO CADASTRAR ===>", JSON.stringify(err, null, 2));
-        Alert.alert(
-          "Erro",
-          err.response?.data?.error || err.message || "Erro ao cadastrar"
-        );
-      } finally {
-        setLoading(false);
-      }
+    // 3️⃣ Envia para o backend
+    await api.post(endpoint, payload);
 
-  };
+    Alert.alert(
+      "Sucesso",
+      `${userType === "aluno" ? "Aluno" : "Universidade"} cadastrado com sucesso!`
+    );
+
+    // 4️⃣ Redireciona para login
+    navigation.replace("Login");
+
+  } catch (err: any) {
+    console.log("ERRO AO CADASTRAR ===>", JSON.stringify(err, null, 2));
+    Alert.alert(
+      "Erro",
+      err.response?.data?.error || err.message || "Erro ao cadastrar"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getButtonText = () => {
     if (loading) return "Carregando...";

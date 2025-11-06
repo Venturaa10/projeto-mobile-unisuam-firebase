@@ -5,25 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithCredential } from "firebase/auth";
-
-// Inicializa Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyAmfKR2xXeRcV_PUXa4hGbP6HcVgsfV2LY",
-  authDomain: "projeto-mobile-unisuam-expo.firebaseapp.com",
-  projectId: "projeto-mobile-unisuam-expo",
-  storageBucket: "projeto-mobile-unisuam-expo.appspot.com",
-  messagingSenderId: "172745544733",
-  appId: "1:172745544733:android:302965d795e8325f39a2f4",
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// Necessário para o Expo Auth Session
-WebBrowser.maybeCompleteAuthSession();
+import { auth } from "../services/firebase"; // importa do seu firebase.ts
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
 type UserType = "aluno" | "universidade";
@@ -35,11 +18,6 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
-  // Configuração do Google Auth
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: "172745544733-13jekhqkme2hiilt19r2a1u7uu3mk6u9.apps.googleusercontent.com",
-  });
-
   useEffect(() => {
     const init = async () => {
       await AsyncStorage.removeItem("token");
@@ -50,54 +28,56 @@ const LoginScreen: React.FC = () => {
     init();
   }, []);
 
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential)
-        .then(async (userCredential) => {
-          const { email, displayName, uid } = userCredential.user;
-          const endpoint = userType === "aluno" ? "/auth/google/aluno" : "/auth/google/universidade";
-          const res = await api.post(endpoint, { email, nome: displayName, googleId: uid });
+const handleLogin = async () => {
+  if (!login || !senha) {
+    Alert.alert("Erro", "Preencha todos os campos");
+    return;
+  }
 
-          await AsyncStorage.setItem("token", res.data.token);
-          await AsyncStorage.setItem("tipo", res.data.tipo);
-          await AsyncStorage.setItem("usuario", JSON.stringify(res.data.usuario));
+  setLoading(true);
+  try {
+    // 🔐 Login Firebase
+    const userCredential = await signInWithEmailAndPassword(auth, login, senha);
+    const idToken = await userCredential.user.getIdToken(); // token Firebase
+    const uid = userCredential.user.uid;
 
-          navigation.replace("Home");
-        })
-        .catch((err) => {
-          Alert.alert("Erro", "Falha ao autenticar com Google");
-          console.error(err);
-        });
-    }
-  }, [response]);
+    console.log("✅ Firebase UID:", uid);
+    console.log("✅ Firebase Token:", idToken);
 
-  const handleLogin = async () => {
-    if (!login || !senha) {
-      Alert.alert("Erro", "Preencha todos os campos");
-      return;
-    }
-    setLoading(true);
-    try {
-      const endpoint = userType === "aluno" ? "/auth/aluno" : "/auth/universidade";
-      const response = await api.post<LoginResponse>(endpoint, { login, senha });
-      await AsyncStorage.setItem("token", response.data.token);
-      await AsyncStorage.setItem("tipo", response.data.tipo);
-      await AsyncStorage.setItem("usuario", JSON.stringify(response.data.usuario));
-      navigation.replace("Home");
-    } catch (err: any) {
-      Alert.alert("Erro", err.response?.data?.error || "Erro ao logar");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 🔗 Envia token ao backend para gerar JWT interno
+    const endpoint = userType === "aluno" ? "/auth/aluno" : "/auth/universidade";
+    const response = await api.post<LoginResponse>(endpoint, { tokenFirebase: idToken });
 
-  const handleGoogleLogin = () => {
-    promptAsync();
-  };
+    console.log("✅ Resposta backend:", response.data);
 
-  const getButtonText = () => (loading ? "Carregando..." : userType === "aluno" ? "Entrar como Aluno" : "Entrar como Universidade");
+    // 💾 Salva localmente
+    await AsyncStorage.setItem("token", response.data.token);
+    await AsyncStorage.setItem("tipo", response.data.tipo);
+
+    const usuarioComUid = { ...response.data.usuario, uid };
+    console.log("✅ Usuário com UID:", usuarioComUid);
+
+    await AsyncStorage.setItem("usuario", JSON.stringify(usuarioComUid));
+
+    // ✅ Verifica AsyncStorage
+    const testeArmazenamento = await AsyncStorage.getItem("usuario");
+    console.log("📦 Usuário salvo no AsyncStorage:", testeArmazenamento);
+
+    navigation.replace("Home");
+  } catch (err: any) {
+    console.error("❌ Erro no login:", err);
+    Alert.alert("Erro", err.response?.data?.error || err.message || "Falha ao autenticar usuário");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const getButtonText = () =>
+    loading
+      ? "Carregando..."
+      : userType === "aluno"
+      ? "Entrar como Aluno"
+      : "Entrar como Universidade";
 
   return (
     <View style={styles.container}>
@@ -105,20 +85,29 @@ const LoginScreen: React.FC = () => {
 
       {/* Seletor de tipo */}
       <View style={styles.selector}>
-        <TouchableOpacity style={[styles.option, userType === "aluno" && styles.selectedOption]} onPress={() => setUserType("aluno")}>
+        <TouchableOpacity
+          style={[styles.option, userType === "aluno" && styles.selectedOption]}
+          onPress={() => setUserType("aluno")}
+        >
           <Text style={userType === "aluno" ? styles.selectedText : styles.optionText}>Aluno</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.option, userType === "universidade" && styles.selectedOption]} onPress={() => setUserType("universidade")}>
-          <Text style={userType === "universidade" ? styles.selectedText : styles.optionText}>Universidade</Text>
+        <TouchableOpacity
+          style={[styles.option, userType === "universidade" && styles.selectedOption]}
+          onPress={() => setUserType("universidade")}
+        >
+          <Text style={userType === "universidade" ? styles.selectedText : styles.optionText}>
+            Universidade
+          </Text>
         </TouchableOpacity>
       </View>
 
       <TextInput
         style={styles.input}
-        placeholder={userType === "aluno" ? "CPF ou Email" : "CNPJ ou Email"}
+        placeholder={userType === "aluno" ? "Email do aluno" : "Email da universidade"}
         value={login}
         onChangeText={setLogin}
-        maxLength={50}
+        keyboardType="email-address"
+        autoCapitalize="none"
         placeholderTextColor="#999"
       />
 
@@ -136,10 +125,6 @@ const LoginScreen: React.FC = () => {
         <Text style={styles.buttonText}>{getButtonText()}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: "#DB4437" }]} onPress={handleGoogleLogin}>
-        <Text style={styles.buttonText}>Entrar com Google</Text>
-      </TouchableOpacity>
-
       <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate("Cadastro")}>
         <Text style={styles.registerText}>Não tem conta? Cadastre-se</Text>
       </TouchableOpacity>
@@ -148,73 +133,18 @@ const LoginScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    justifyContent: "center", 
-    padding: 20, 
-    backgroundColor: "#ffffff" // fundo branco
-  },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "bold", 
-    textAlign: "center", 
-    marginBottom: 30,
-    color: "#1f2937" // cinza escuro
-  },
-  selector: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
-    marginBottom: 20 
-  },
-  option: { 
-    padding: 10, 
-    borderWidth: 1, 
-    borderColor: "#9ca3af", // cinza médio
-    marginHorizontal: 5, 
-    borderRadius: 5,
-    backgroundColor: "#f3f4f6" // leve cinza de fundo
-  },
-  selectedOption: { 
-    backgroundColor: "#374151", // cinza escuro
-    borderColor: "#374151"
-  },
-  optionText: { 
-    color: "#1f2937" // cinza escuro
-  },
-  selectedText: { 
-    color: "#f9fafb", // quase branco
-    fontWeight: "bold" 
-  },
-  input: { 
-    borderWidth: 1, 
-    borderColor: "#9ca3af", // cinza médio
-    borderRadius: 5, 
-    padding: 10, 
-    marginBottom: 15, 
-    backgroundColor: "#f3f4f6", // leve cinza de fundo
-    color: "#111827" // texto escuro
-  },
-  button: { 
-    backgroundColor: "#374151", // cinza escuro
-    padding: 15, 
-    borderRadius: 5, 
-    alignItems: "center", 
-    marginBottom: 10 
-  },
-  buttonText: { 
-    color: "#f9fafb", 
-    fontWeight: "bold", 
-    fontSize: 16 
-  },
-  registerButton: { 
-    alignItems: "center", 
-    marginTop: 10 
-  },
-  registerText: { 
-    color: "#374151", // cinza escuro
-    fontWeight: "bold" 
-  },
+  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#ffffff" },
+  title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 30, color: "#1f2937" },
+  selector: { flexDirection: "row", justifyContent: "center", marginBottom: 20 },
+  option: { padding: 10, borderWidth: 1, borderColor: "#9ca3af", marginHorizontal: 5, borderRadius: 5, backgroundColor: "#f3f4f6" },
+  selectedOption: { backgroundColor: "#374151", borderColor: "#374151" },
+  optionText: { color: "#1f2937" },
+  selectedText: { color: "#f9fafb", fontWeight: "bold" },
+  input: { borderWidth: 1, borderColor: "#9ca3af", borderRadius: 5, padding: 10, marginBottom: 15, backgroundColor: "#f3f4f6", color: "#111827" },
+  button: { backgroundColor: "#374151", padding: 15, borderRadius: 5, alignItems: "center", marginBottom: 10 },
+  buttonText: { color: "#f9fafb", fontWeight: "bold", fontSize: 16 },
+  registerButton: { alignItems: "center", marginTop: 10 },
+  registerText: { color: "#374151", fontWeight: "bold" },
 });
-
 
 export default LoginScreen;
