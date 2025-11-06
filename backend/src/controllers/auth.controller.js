@@ -47,6 +47,7 @@ export const loginFirebaseAluno = async (req, res) => {
         nome: aluno.nome,
         email: aluno.email,
         cpf_cnpj: aluno.cpf,
+         uid,
       },
     });
   } catch (err) {
@@ -93,6 +94,7 @@ export const loginFirebaseUniversidade = async (req, res) => {
         nome: uni.nome,
         email: uni.email,
         cpf_cnpj: uni.cnpj,
+        uid,
       },
     });
   } catch (err) {

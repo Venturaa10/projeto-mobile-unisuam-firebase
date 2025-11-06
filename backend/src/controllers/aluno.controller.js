@@ -56,30 +56,30 @@ export const buscarAlunoPorId = async (req, res) => {
 };
 
 // Atualizar aluno
+
 export const atualizarAluno = async (req, res) => {
   try {
     const { id } = req.params;
-    const { senha, email, nome } = req.body; // campos que podem vir no body
-    const dados = { ...req.body };
-    delete dados.senha; // não atualiza senha aqui
+    const { uid, senha, ...dados } = req.body; // ✅ inclui uid
 
-    // 1️⃣ Buscar aluno no banco
+    if (!uid) return res.status(400).json({ error: "UID do Firebase é obrigatório" });
+
+    // Atualiza no Firebase primeiro
+    if (dados.email) {
+      await admin.auth().updateUser(uid, { email: dados.email });
+    }
+    // Se quiser atualizar senha
+    if (senha) {
+      await admin.auth().updateUser(uid, { password: senha });
+    }
+
+    // Atualiza no banco local
     const aluno = await Aluno.findByPk(id);
     if (!aluno) return res.status(404).json({ error: "Aluno não encontrado" });
 
-    // 2️⃣ Atualizar no Firebase se houver email ou nome
-    const updatesFirebase = {};
-    if (email && email !== aluno.email) updatesFirebase.email = email;
-    if (nome && nome !== aluno.nome) updatesFirebase.displayName = nome;
-
-    if (Object.keys(updatesFirebase).length > 0) {
-      await admin.auth().updateUser(aluno.uid, updatesFirebase);
-    }
-
-    // 3️⃣ Atualizar no banco local
     await aluno.update(dados);
 
-    res.json(aluno);
+    res.json({ ...aluno.toJSON(), uid });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
