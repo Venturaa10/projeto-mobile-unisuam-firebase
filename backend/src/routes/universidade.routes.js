@@ -1,6 +1,6 @@
 import express from "express";
 import upload from "../middlewares/upload.js";
-import { criarUniversidade, listarUniversidades, buscarUniversidadePorId, atualizarUniversidade, atualizarSenhaUniversidade, excluirUniversidade, loginGoogleUniversidade } from "../controllers/universidade.controller.js";
+import { criarUniversidade, listarUniversidades, buscarUniversidadePorId, atualizarUniversidade, atualizarSenhaUniversidade, excluirUniversidade } from "../controllers/universidade.controller.js";
 
 const router = express.Router();
 
