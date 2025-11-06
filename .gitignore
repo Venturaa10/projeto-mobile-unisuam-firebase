@@ -19,6 +19,8 @@ dist/
 
 backend/src/uploads/*
 
+backend/src/config/serviceAccountKey.json
+backend/src/config/serviceAccountKey.json
 
 
 # IDEs
