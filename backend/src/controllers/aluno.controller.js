@@ -115,12 +115,28 @@ export const atualizarSenhaAluno = async (req, res) => {
 export const excluirAluno = async (req, res) => {
   try {
     const { id } = req.params;
+    const { uid } = req.body; // ⚠️ o UID vem do frontend
+
     const aluno = await Aluno.findByPk(id);
     if (!aluno) return res.status(404).json({ error: "Aluno não encontrado" });
 
+    // Exclui do Firebase primeiro
+    if (uid) {
+      try {
+        await admin.auth().deleteUser(uid);
+        console.log(`Usuário Firebase (${uid}) excluído com sucesso.`);
+      } catch (firebaseErr) {
+        console.error("Erro ao excluir do Firebase:", firebaseErr.message);
+        // não retornar erro aqui, apenas logar — para não travar exclusão local
+      }
+    }
+
+    // Exclui do banco local
     await aluno.destroy();
-    res.json({ message: "Aluno excluído com sucesso" });
+
+    res.json({ message: "Aluno excluído com sucesso (Firebase + banco local)" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
