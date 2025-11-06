@@ -1,6 +1,7 @@
 import { Universidade } from "../initModels.js"; 
 import bcrypt from "bcryptjs"; 
 import jwt from "jsonwebtoken";
+import admin from "../config/firebase.js"; // seu firebase-admin
 
 export const criarUniversidade = async (req, res) => {
   try {
@@ -54,28 +55,29 @@ export const buscarUniversidadePorId = async (req, res) => {
   }
 };
 
-// Atualizar universidade
 export const atualizarUniversidade = async (req, res) => {
   try {
     const { id } = req.params;
-    // console.log("ID recebido nos params:", id);
-    // console.log("Corpo da requisição (req.body):", req.body);
-
     const universidade = await Universidade.findByPk(id);
+
     if (!universidade) {
-      // console.log("Universidade não encontrada");
       return res.status(404).json({ error: "Universidade não encontrada" });
     }
 
-    // Bloqueia alteração de senha diretamente aqui
-    const { senha, ...dados } = req.body;
-    // console.log("Dados que serão atualizados:", dados);
+    const { senha, email, ...dados } = req.body; // separa email e senha do restante dos campos
+
+    // Atualiza Firebase se o email mudou
+    if (email && email !== universidade.email) {
+      await admin.auth().updateUser(universidade.uid, { email });
+      dados.email = email; // garante que o banco seja atualizado também
+    }
+
+    // Não atualiza a senha aqui; criar endpoint específico se quiser atualizar senha
 
     await universidade.update(dados);
-    // console.log("Universidade atualizada com sucesso");
+
     res.json(universidade);
   } catch (err) {
-    // console.error("Erro ao atualizar universidade:", err);
     res.status(400).json({ error: err.message });
   }
 };

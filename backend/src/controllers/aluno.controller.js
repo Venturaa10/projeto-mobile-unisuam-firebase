@@ -1,6 +1,7 @@
 import { Aluno } from "../initModels.js"; 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import admin from "../config/firebase.js"; // seu firebase-admin
 
 
 export const criarAluno = async (req, res) => {
@@ -58,18 +59,32 @@ export const buscarAlunoPorId = async (req, res) => {
 export const atualizarAluno = async (req, res) => {
   try {
     const { id } = req.params;
+    const { senha, email, nome } = req.body; // campos que podem vir no body
+    const dados = { ...req.body };
+    delete dados.senha; // não atualiza senha aqui
+
+    // 1️⃣ Buscar aluno no banco
     const aluno = await Aluno.findByPk(id);
     if (!aluno) return res.status(404).json({ error: "Aluno não encontrado" });
 
-    // Não permitir atualização de senha diretamente aqui
-    const { senha, ...dados } = req.body;
+    // 2️⃣ Atualizar no Firebase se houver email ou nome
+    const updatesFirebase = {};
+    if (email && email !== aluno.email) updatesFirebase.email = email;
+    if (nome && nome !== aluno.nome) updatesFirebase.displayName = nome;
 
+    if (Object.keys(updatesFirebase).length > 0) {
+      await admin.auth().updateUser(aluno.uid, updatesFirebase);
+    }
+
+    // 3️⃣ Atualizar no banco local
     await aluno.update(dados);
+
     res.json(aluno);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 // Atualizar senha do aluno
 export const atualizarSenhaAluno = async (req, res) => {
