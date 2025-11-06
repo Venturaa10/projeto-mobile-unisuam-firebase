@@ -58,29 +58,27 @@ export const buscarUniversidadePorId = async (req, res) => {
 export const atualizarUniversidade = async (req, res) => {
   try {
     const { id } = req.params;
+    const { uid, senha, email, ...dados } = req.body; // pega uid do frontend
+
+    if (!uid) return res.status(400).json({ error: "UID do Firebase é obrigatório" });
+
     const universidade = await Universidade.findByPk(id);
-
-    if (!universidade) {
-      return res.status(404).json({ error: "Universidade não encontrada" });
-    }
-
-    const { senha, email, ...dados } = req.body; // separa email e senha do restante dos campos
+    if (!universidade) return res.status(404).json({ error: "Universidade não encontrada" });
 
     // Atualiza Firebase se o email mudou
     if (email && email !== universidade.email) {
-      await admin.auth().updateUser(universidade.uid, { email });
+      await admin.auth().updateUser(uid, { email });
       dados.email = email; // garante que o banco seja atualizado também
     }
 
-    // Não atualiza a senha aqui; criar endpoint específico se quiser atualizar senha
-
     await universidade.update(dados);
 
-    res.json(universidade);
+    res.json({ ...universidade.toJSON(), uid });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 
 // Atualizar senha da universidade
