@@ -175,38 +175,52 @@ const handleAtualizar = async () => {
 
 
   // 🗑️ Excluir conta
-  const handleExcluirConta = () => {
-    Alert.alert(
-      "Confirmação",
-      "Você realmente deseja excluir sua conta? Essa ação não pode ser desfeita.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const endpoint =
-                userType === "aluno"
-                  ? `/alunos/${userId}`
-                  : `/universidades/${userId}`;
+const handleExcluirConta = () => {
+  Alert.alert(
+    "Confirmação",
+    "Você realmente deseja excluir sua conta? Essa ação não pode ser desfeita.",
+    [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Excluir",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const endpoint =
+              userType === "aluno"
+                ? `/alunos/${userId}`
+                : `/universidades/${userId}`;
 
-              await api.delete(endpoint);
-              await AsyncStorage.clear();
+            const storedUser = await AsyncStorage.getItem("usuario");
+            const userData = storedUser ? JSON.parse(storedUser) : null;
+            const uid = userData?.uid;
 
-              Alert.alert("Sucesso", "Conta excluída com sucesso!");
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "Login" }],
-              });
-            } catch (err: any) {
-              Alert.alert("Erro", "Não foi possível excluir a conta.");
+            if (!uid) {
+              Alert.alert("Erro", "UID do usuário não encontrado.");
+              return;
             }
-          },
+
+            // 🔹 Envia o UID junto na requisição DELETE
+            await api.delete(endpoint, {
+              data: { uid },
+            });
+
+            await AsyncStorage.clear();
+
+            Alert.alert("Sucesso", "Conta excluída com sucesso!");
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          } catch (err: any) {
+            console.error("Erro ao excluir conta:", err.response?.data || err.message);
+            Alert.alert("Erro", "Não foi possível excluir a conta.");
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   if (!user) return <Text>Carregando...</Text>;
 
